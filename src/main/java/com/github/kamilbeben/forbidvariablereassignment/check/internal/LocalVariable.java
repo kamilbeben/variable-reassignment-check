@@ -40,6 +40,10 @@ public class LocalVariable extends BlockChild {
     return isMutable;
   }
 
+  public boolean isImmutable() {
+    return !isMutable;
+  }
+
   public boolean hasInitialValue() {
     return hasInitialValue;
   }

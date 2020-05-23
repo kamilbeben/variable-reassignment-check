@@ -7,9 +7,12 @@ public class CheckTest {
 
   @Test
   public void basicTest() {
+    Check check = constructCheck();
+    check.mutableAnnotationName = "CustomMutable";
+
     JavaCheckVerifier.newVerifier()
       .onFile("src/test/files/forbidvariablereassignment/BasicTestCase.java")
-      .withCheck(new Check())
+      .withCheck(check)
       .verifyIssues();
   }
 
@@ -17,7 +20,7 @@ public class CheckTest {
   public void ifConditionTest() {
     JavaCheckVerifier.newVerifier()
       .onFile("src/test/files/forbidvariablereassignment/IfTestCase.java")
-      .withCheck(new Check())
+      .withCheck(constructCheck())
       .verifyIssues();
   }
 
@@ -25,7 +28,7 @@ public class CheckTest {
   public void switchTest() {
     JavaCheckVerifier.newVerifier()
       .onFile("src/test/files/forbidvariablereassignment/SwitchTestCase.java")
-      .withCheck(new Check())
+      .withCheck(constructCheck())
       .verifyIssues();
   }
 
@@ -33,7 +36,7 @@ public class CheckTest {
   public void loopTest() {
     JavaCheckVerifier.newVerifier()
       .onFile("src/test/files/forbidvariablereassignment/LoopTestCase.java")
-      .withCheck(new Check())
+      .withCheck(constructCheck())
       .verifyIssues();
   }
 
@@ -41,8 +44,20 @@ public class CheckTest {
   public void orderStatusTest() {
     JavaCheckVerifier.newVerifier()
       .onFile("src/test/files/forbidvariablereassignment/OrderStatus.java")
-      .withCheck(new Check())
+      .withCheck(constructCheck())
       .verifyIssues();
+  }
+
+  public Check constructCheck() {
+    Check check = new Check();
+
+    check.mutableAnnotationName = Const.DEFAULT_MUTABLE_ANNOTATION_NAME;
+    check.variableReassignedMessageTemplate = Const.DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE;
+    check.variableReassignedInsideLoopMessageTemplate = Const.DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE;
+    check.forbidVariableReassignmentInsideLoop = Boolean.valueOf(Const.DEFAULT_FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP);
+    check.forbidVariableReassignment = Boolean.valueOf(Const.DEFAULT_FORBID_VARIABLE_REASSIGNMENT);
+
+    return check;
   }
 
 }

@@ -12,7 +12,7 @@ public class ValueAssignationExpression extends BlockChild {
     parent.addChild(this);
   }
 
-  public LocalVariable getLocalVariable() {
+  public LocalVariable localVariable() {
     return localVariable;
   }
 }

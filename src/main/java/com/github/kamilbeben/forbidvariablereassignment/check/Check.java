@@ -4,30 +4,61 @@ import com.github.kamilbeben.forbidvariablereassignment.check.internal.Block;
 import com.github.kamilbeben.forbidvariablereassignment.check.internal.LocalVariable;
 import com.github.kamilbeben.forbidvariablereassignment.check.internal.ValueAssignationExpression;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import org.apache.commons.lang.StringUtils;
 import org.sonar.check.Rule;
+import org.sonar.check.RuleProperty;
 import org.sonar.plugins.java.api.JavaFileScanner;
 import org.sonar.plugins.java.api.JavaFileScannerContext;
 import org.sonar.plugins.java.api.tree.*;
-import org.sonar.plugins.java.api.tree.Tree.Kind;
 
 import java.util.*;
 
-import static org.sonar.plugins.java.api.tree.Tree.Kind.*;
+import static org.sonar.check.Priority.MINOR;
+import static org.sonar.plugins.java.api.tree.Tree.Kind.ANNOTATION;
 
 @Rule(
-  key = "ForbidVariableReassignment"
+  key = "ForbidVariableReassignment",
+  description = "", // TODO text
+  priority = MINOR
 )
 public class Check extends BaseTreeVisitor implements JavaFileScanner {
 
-  private static Set<Kind> LOOP_TREE_KINDS = ImmutableSet.of(WHILE_STATEMENT, DO_STATEMENT, FOR_STATEMENT, FOR_EACH_STATEMENT);
-  private static Set<Kind> BREAK_OUT_OF_SWITCH_EXPRESSION_KINDS = ImmutableSet.of(BREAK_STATEMENT, RETURN_STATEMENT);
-
-  // TODO configurable mutable annotation
-  // TODO method parameters
   // TODO ++, -- lub opisz ze pomijasz i dlaczego pomijasz
+  // TODO method parameters
+  // TODO html example
 
-  private final Deque<Block> rootBlocks = new ArrayDeque<>(); // static blocks, methods
+  @RuleProperty(
+    defaultValue = Const.DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE,
+    description = "" // TODO text
+  )
+  String variableReassignedMessageTemplate;
+
+  @RuleProperty(
+    defaultValue = Const.DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE,
+    description = "" // TODO text
+  )
+  String variableReassignedInsideLoopMessageTemplate;
+
+  @RuleProperty(
+    defaultValue = Const.DEFAULT_FORBID_VARIABLE_REASSIGNMENT,
+    description = "" // TODO text
+  )
+  boolean forbidVariableReassignment;
+
+  @RuleProperty(
+    defaultValue = Const.DEFAULT_FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP,
+    description = "" // TODO text
+  )
+  boolean forbidVariableReassignmentInsideLoop;
+
+  @RuleProperty(
+    defaultValue = Const.DEFAULT_MUTABLE_ANNOTATION_NAME,
+    description = "" // TODO text
+  )
+  String mutableAnnotationName;
+
+  // blocks (static blocks, methods) which are direct children of the class
+  private final Deque<Block> rootBlocks = new ArrayDeque<>();
 
   private JavaFileScannerContext fileScannerContext;
 
@@ -76,7 +107,7 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
 
       final Block parent = rootBlocks.peek().nearestBlock(tree);
       final boolean hasInitialValue = tree.initializer() != null;
-      final boolean isMutable = false;
+      final boolean isMutable = isAnnotatedByConfiguredAnnotation(tree);
 
       LocalVariable.create(parent, tree, isMutable, hasInitialValue);
     } finally {
@@ -182,7 +213,7 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
         mutuallyInclusiveCaseGroupTrees.add(caseGroupTree);
 
         final boolean hasBreakOrReturnStatement = caseGroupTree.body().stream().map(Tree::kind)
-          .anyMatch(BREAK_OUT_OF_SWITCH_EXPRESSION_KINDS::contains);
+          .anyMatch(Const.BREAK_OUT_OF_SWITCH_EXPRESSION_KINDS::contains);
 
         if (hasBreakOrReturnStatement) {
           mutuallyExclusiveCaseGroupTreeLists.add(ImmutableList.copyOf(mutuallyInclusiveCaseGroupTrees));
@@ -195,6 +226,17 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
     }
 
     return mutuallyExclusiveCaseGroupTreeLists;
+  }
+
+  private boolean isAnnotatedByConfiguredAnnotation(VariableTree tree) {
+
+    if (StringUtils.isBlank(mutableAnnotationName)) return false;
+
+    return tree.modifiers().stream()
+      .filter(modifier -> modifier.kind() == ANNOTATION)
+      .map(AnnotationTree.class::cast)
+      .map(annotationTree -> annotationTree.annotationType().symbolType().name())
+      .anyMatch(it -> Objects.equals(it, mutableAnnotationName));
   }
 
   private String getVariableName(AssignmentExpressionTree tree) {
@@ -217,7 +259,7 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
       parent != null;
       parent = parent.parent()
     ) {
-      if (LOOP_TREE_KINDS.contains(parent.kind())) {
+      if (Const.LOOP_TREE_KINDS.contains(parent.kind())) {
         return true;
       }
     }
@@ -228,17 +270,19 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
                                                  ValueAssignationExpression assignationExpression,
                                                  AssignmentExpressionTree tree) {
 
-    if (isInsideLoop(tree)) {
-      reportAssignInsideLoopStatement(assignationExpression);
+    if (forbidVariableReassignmentInsideLoop && variable.isImmutable() && isInsideLoop(tree)) {
+      reportIssue(assignationExpression, variableReassignedInsideLoopMessageTemplate);
       return;
     }
+
+    if (!forbidVariableReassignment) return;
 
     final List<ValueAssignationExpression> expressions = variable.assignationExpressions();
 
     if (variable.isMutable()) return;
 
     if (variable.hasInitialValue()) {
-      reportIllegalVariableReassign(assignationExpression);
+      reportIssue(assignationExpression, variableReassignedMessageTemplate);
       return;
     }
 
@@ -246,7 +290,7 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
       if (previousAssignationExpression == assignationExpression ||
         areExpressionsMutuallyExclusive(previousAssignationExpression, assignationExpression)) continue;
 
-      reportIllegalVariableReassign(assignationExpression);
+      reportIssue(assignationExpression, variableReassignedMessageTemplate);
       return;
     }
   }
@@ -268,32 +312,14 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
       .orElse(null);
   }
 
-  private void reportAssignInsideLoopStatement(ValueAssignationExpression expression) {
+  private void reportIssue(ValueAssignationExpression expression, String messageTemplate) {
 
-    report(
-      expression,
-      String.format(
-        "Variable %s was assigned inside loop statement at line %d.",
-        expression.getLocalVariable().name(),
-        expression.firstToken().line()
-      )
-    );
-  }
+    int line = expression.firstToken().line();
+    final String message = Optional.ofNullable(messageTemplate).orElse(Const.DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE)
+      .replace(Const.PARAM_VARIABLE_NAME, expression.localVariable().name())
+      .replace(Const.PARAM_LINE_NUMBER,   Integer.toString(line))
+      .replace(Const.PARAM_COLUMN_NUMBER, Integer.toString(expression.firstToken().column()));
 
-  private void reportIllegalVariableReassign(ValueAssignationExpression expression) {
-
-    report(
-      expression,
-      String.format(
-        "Variable %s which is not marked as mutable was reassigned.",
-        expression.getLocalVariable().name(),
-        expression.firstToken().line()
-      )
-    );
-  }
-
-  private void report(ValueAssignationExpression expression, String message) {
-
-    fileScannerContext.addIssue(expression.firstToken().line(), this, message);
+    fileScannerContext.addIssue(line, this, message);
   }
 }

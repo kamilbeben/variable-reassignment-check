@@ -1,8 +1,28 @@
-
 class BasicTestCase {
 
   private int field1 = 2;
   private int field2;
+
+  {
+
+    @CustomMutable int mutableVariable1 = 1;
+    mutableVariable1 = 11;
+
+    @CustomMutable
+    int mutableVariable2 = 2;
+    mutableVariable2 = 21;
+
+    @CustomMutable
+
+
+
+
+    int mutableVariable3;
+
+    while (c) {
+      mutableVariable3 = 3;
+    }
+  }
 
   {
     field1 = 3;
