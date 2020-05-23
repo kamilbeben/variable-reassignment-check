@@ -18,8 +18,8 @@ import static org.sonar.check.Priority.MINOR;
 import static org.sonar.plugins.java.api.tree.Tree.Kind.ANNOTATION;
 
 @Rule(
-  key = "ForbidVariableReassignment",
-  description = "", // TODO text
+  key = CHECK_NAME,
+  description = CHECK_DESCRIPTION,
   priority = MINOR
 )
 public class Check extends BaseTreeVisitor implements JavaFileScanner {
@@ -28,32 +28,32 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
   // TODO html example
 
   @RuleProperty(
-    defaultValue = Utils.DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE,
-    description = "" // TODO text
+    defaultValue = DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE,
+    description = VARIABLE_REASSIGNED_MESSAGE_TEMPLATE_DESCRIPTION
   )
   String variableReassignedMessageTemplate;
 
   @RuleProperty(
-    defaultValue = Utils.DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE,
-    description = "" // TODO text
+    defaultValue = DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE,
+    description = VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE_DESCRIPTION
   )
   String variableReassignedInsideLoopMessageTemplate;
 
   @RuleProperty(
-    defaultValue = Utils.DEFAULT_FORBID_VARIABLE_REASSIGNMENT,
-    description = "" // TODO text
+    defaultValue = DEFAULT_FORBID_VARIABLE_REASSIGNMENT,
+    description = FORBID_VARIABLE_REASSIGNMENT_DESCRIPTION
   )
   boolean forbidVariableReassignment;
 
   @RuleProperty(
-    defaultValue = Utils.DEFAULT_FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP,
-    description = "" // TODO text
+    defaultValue = DEFAULT_FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP,
+    description = FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP_DESCRIPTION
   )
   boolean forbidVariableReassignmentInsideLoop;
 
   @RuleProperty(
-    defaultValue = Utils.DEFAULT_MUTABLE_ANNOTATION_NAME,
-    description = "" // TODO text
+    defaultValue = DEFAULT_MUTABLE_ANNOTATION_NAME,
+    description = MUTABLE_ANNOTATION_DESCRIPTION
   )
   String mutableAnnotationName;
 
@@ -304,7 +304,7 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
         return false;
     }
 
-    return Utils.isWithin(openToken, closeToken, cursor);
+    return isWithin(openToken, closeToken, cursor);
   }
 
   private Tree recursivelyGetParentLoopStatementTree(Tree cursor) {
@@ -372,10 +372,10 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
   private void reportIssue(ValueAssignationExpression expression, String messageTemplate) {
 
     int line = expression.firstToken().line();
-    final String message = Optional.ofNullable(messageTemplate).orElse(Utils.DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE)
-      .replace(Utils.PARAM_VARIABLE_NAME, expression.localVariable().name())
-      .replace(Utils.PARAM_LINE_NUMBER,   Integer.toString(line))
-      .replace(Utils.PARAM_COLUMN_NUMBER, Integer.toString(expression.firstToken().column()));
+    final String message = Optional.ofNullable(messageTemplate).orElse(DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE)
+      .replace(PARAM_VARIABLE_NAME, expression.localVariable().name())
+      .replace(PARAM_LINE_NUMBER,   Integer.toString(line))
+      .replace(PARAM_COLUMN_NUMBER, Integer.toString(expression.firstToken().column()));
 
     fileScannerContext.addIssue(line, this, message);
   }

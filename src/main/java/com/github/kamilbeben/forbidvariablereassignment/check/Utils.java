@@ -9,16 +9,28 @@ public class Utils {
 
   private Utils() {}
 
+  public static final String CHECK_NAME = "ForbidVariableReassignment";
+  public static final String CHECK_DESCRIPTION = ""; // TODO text
+
   static final String PARAM_VARIABLE_NAME = "{variableName}";
   static final String PARAM_LINE_NUMBER = "{lineNumber}";
   static final String PARAM_COLUMN_NUMBER = "{columnNumber}";
   static final String TRUE = "true";
 
   static final String DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE = PARAM_VARIABLE_NAME + " was reassigned inside loop at line " + PARAM_LINE_NUMBER + ".";
+  static final String VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE_DESCRIPTION = ""; // TODO text
+
   static final String DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE = PARAM_VARIABLE_NAME + " was reassigned at line " + PARAM_LINE_NUMBER + ".";
+  static final String VARIABLE_REASSIGNED_MESSAGE_TEMPLATE_DESCRIPTION = ""; // TODO text
+
   static final String DEFAULT_FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP = TRUE;
+  static final String FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP_DESCRIPTION = ""; // TODO text
+
   static final String DEFAULT_FORBID_VARIABLE_REASSIGNMENT = TRUE;
+  static final String FORBID_VARIABLE_REASSIGNMENT_DESCRIPTION = ""; // TODO text
+
   static final String DEFAULT_MUTABLE_ANNOTATION_NAME = "Mutable";
+  static final String MUTABLE_ANNOTATION_DESCRIPTION = ""; // TODO text
 
   static Tree.Kind[] LOOP_TREE = { WHILE_STATEMENT, DO_STATEMENT, FOR_STATEMENT, FOR_EACH_STATEMENT };
   static Tree.Kind[] BREAK_OUT_OF_SWITCH_EXPRESSION = { BREAK_STATEMENT, RETURN_STATEMENT };
