@@ -51,22 +51,22 @@ public class Block extends BlockChild {
     return ImmutableList.copyOf(children);
   }
 
-  public LocalVariable findVariable(String name, Tree cursor) {
+  public Variable findVariable(String name, Tree cursor) {
     for (
       Block block = nearestBlock(cursor);
       block != null;
       block = block.parent()
     ) {
 
-      final LocalVariable localVariable = block.children().stream()
-        .filter(LocalVariable.class::isInstance)
-        .map(LocalVariable.class::cast)
-        .filter(variable -> variable.name().equals(name))
+      final Variable variable = block.children().stream()
+        .filter(Variable.class::isInstance)
+        .map(Variable.class::cast)
+        .filter(it -> it.name().equals(name))
         .findAny()
         .orElse(null);
 
-      if (localVariable != null) {
-        return localVariable;
+      if (variable != null) {
+        return variable;
       }
     }
     return null;

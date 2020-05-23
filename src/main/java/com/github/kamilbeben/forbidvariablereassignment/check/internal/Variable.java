@@ -7,23 +7,34 @@ import org.sonar.plugins.java.api.tree.VariableTree;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LocalVariable extends BlockChild {
+public class Variable extends BlockChild {
+
+  enum Type {
+    LOCAL_VARIABLE,
+    METHOD_PARAMETER
+  }
 
   private final String name;
   private final boolean isMutable;
   private final boolean hasInitialValue;
+  private final Type type;
   private final List<ValueAssignationExpression> assignationExpressions = new ArrayList<>();
 
-  protected LocalVariable(Block parent, VariableTree tree, boolean isMutable, boolean hasInitialValue) {
+  protected Variable(Block parent, VariableTree tree, boolean isMutable, boolean hasInitialValue, Type type) {
     super(parent, tree.firstToken(), tree.lastToken());
     this.name = tree.simpleName().name();
     this.isMutable = isMutable;
     this.hasInitialValue = hasInitialValue;
+    this.type = type;
     parent.addChild(this);
   }
 
-  public static LocalVariable create (Block parent, VariableTree tree, boolean mutable, boolean hasInitialValue) {
-    return new LocalVariable(parent, tree, mutable, hasInitialValue);
+  public static Variable createLocalVariable(Block parent, VariableTree tree, boolean mutable, boolean hasInitialValue) {
+    return new Variable(parent, tree, mutable, hasInitialValue, Type.LOCAL_VARIABLE);
+  }
+
+  public static Variable createMethodParameter(Block parent, VariableTree tree, boolean mutable) {
+    return new Variable(parent, tree, mutable, false, Type.METHOD_PARAMETER);
   }
 
   public ValueAssignationExpression assignValue(Block parent, Tree tree) {
@@ -40,12 +51,16 @@ public class LocalVariable extends BlockChild {
     return isMutable;
   }
 
-  public boolean isImmutable() {
-    return !isMutable;
-  }
-
   public boolean hasInitialValue() {
     return hasInitialValue;
+  }
+
+  public boolean isLocal() {
+    return type == Type.LOCAL_VARIABLE;
+  }
+
+  public boolean isMethodParameter() {
+    return type == Type.METHOD_PARAMETER;
   }
 
   public List<ValueAssignationExpression> assignationExpressions() {

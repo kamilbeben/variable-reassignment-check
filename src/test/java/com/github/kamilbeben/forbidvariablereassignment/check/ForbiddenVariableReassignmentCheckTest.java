@@ -53,9 +53,11 @@ public class ForbiddenVariableReassignmentCheckTest {
 
     check.mutableAnnotationName = ForbiddenVariableReassignmentUtils.DEFAULT_MUTABLE_ANNOTATION_NAME;
     check.variableReassignedMessageTemplate = ForbiddenVariableReassignmentUtils.DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE;
+    check.methodParameterReassignedMessageTemplate = ForbiddenVariableReassignmentUtils.DEFAULT_METHOD_PARAMETER_REASSIGNED_MESSAGE_TEMPLATE;
     check.variableReassignedInsideLoopMessageTemplate = ForbiddenVariableReassignmentUtils.DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE;
-    check.forbidVariableReassignmentInsideLoop = Boolean.valueOf(ForbiddenVariableReassignmentUtils.DEFAULT_FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP);
-    check.forbidVariableReassignment = Boolean.valueOf(ForbiddenVariableReassignmentUtils.DEFAULT_FORBID_VARIABLE_REASSIGNMENT);
+    check.forbidReassignmentInsideLoop = Boolean.valueOf(ForbiddenVariableReassignmentUtils.DEFAULT_FORBID_REASSIGNMENT_INSIDE_LOOP);
+    check.forbidLocalVariableReassignment = Boolean.valueOf(ForbiddenVariableReassignmentUtils.DEFAULT_FORBID_LOCAL_VARIABLE_REASSIGNMENT);
+    check.forbidMethodParameterReassignment = Boolean.valueOf(ForbiddenVariableReassignmentUtils.DEFAULT_FORBID_METHOD_PARAMETER_REASSIGNMENT);
 
     return check;
   }

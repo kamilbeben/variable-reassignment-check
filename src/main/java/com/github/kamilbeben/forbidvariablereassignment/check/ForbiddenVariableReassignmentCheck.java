@@ -1,8 +1,8 @@
 package com.github.kamilbeben.forbidvariablereassignment.check;
 
 import com.github.kamilbeben.forbidvariablereassignment.check.internal.Block;
-import com.github.kamilbeben.forbidvariablereassignment.check.internal.LocalVariable;
 import com.github.kamilbeben.forbidvariablereassignment.check.internal.ValueAssignationExpression;
+import com.github.kamilbeben.forbidvariablereassignment.check.internal.Variable;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.lang.StringUtils;
 import org.sonar.check.Rule;
@@ -24,37 +24,29 @@ import static org.sonar.plugins.java.api.tree.Tree.Kind.ANNOTATION;
 )
 public class ForbiddenVariableReassignmentCheck extends BaseTreeVisitor implements JavaFileScanner {
 
+  // TODO tests cases with non-default parameter values
   // TODO registrar
   // TODO html example
 
-  @RuleProperty(
-    defaultValue = DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE,
-    description = VARIABLE_REASSIGNED_MESSAGE_TEMPLATE_DESCRIPTION
-  )
+  @RuleProperty(defaultValue = DEFAULT_FORBID_LOCAL_VARIABLE_REASSIGNMENT, description = FORBID_LOCAL_VARIABLE_REASSIGNMENT_DESCRIPTION)
+  boolean forbidLocalVariableReassignment;
+
+  @RuleProperty(defaultValue = DEFAULT_FORBID_METHOD_PARAMETER_REASSIGNMENT, description = METHOD_PARAMETER_REASSIGNED_MESSAGE_TEMPLATE_DESCRIPTION)
+  boolean forbidMethodParameterReassignment;
+
+  @RuleProperty(defaultValue = DEFAULT_FORBID_REASSIGNMENT_INSIDE_LOOP, description = FORBID_REASSIGNMENT_INSIDE_LOOP_DESCRIPTION)
+  boolean forbidReassignmentInsideLoop;
+
+  @RuleProperty(defaultValue = DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE, description = VARIABLE_REASSIGNED_MESSAGE_TEMPLATE_DESCRIPTION)
   String variableReassignedMessageTemplate;
 
-  @RuleProperty(
-    defaultValue = DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE,
-    description = VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE_DESCRIPTION
-  )
+  @RuleProperty(defaultValue = DEFAULT_METHOD_PARAMETER_REASSIGNED_MESSAGE_TEMPLATE, description = METHOD_PARAMETER_REASSIGNED_MESSAGE_TEMPLATE_DESCRIPTION)
+  String methodParameterReassignedMessageTemplate;
+
+  @RuleProperty(defaultValue = DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE, description = VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE_DESCRIPTION)
   String variableReassignedInsideLoopMessageTemplate;
 
-  @RuleProperty(
-    defaultValue = DEFAULT_FORBID_VARIABLE_REASSIGNMENT,
-    description = FORBID_VARIABLE_REASSIGNMENT_DESCRIPTION
-  )
-  boolean forbidVariableReassignment;
-
-  @RuleProperty(
-    defaultValue = DEFAULT_FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP,
-    description = FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP_DESCRIPTION
-  )
-  boolean forbidVariableReassignmentInsideLoop;
-
-  @RuleProperty(
-    defaultValue = DEFAULT_MUTABLE_ANNOTATION_NAME,
-    description = MUTABLE_ANNOTATION_DESCRIPTION
-  )
+  @RuleProperty(defaultValue = DEFAULT_MUTABLE_ANNOTATION_NAME, description = MUTABLE_ANNOTATION_DESCRIPTION)
   String mutableAnnotationName;
 
   // blocks (static blocks, methods) which are direct children of the class
@@ -79,7 +71,7 @@ public class ForbiddenVariableReassignmentCheck extends BaseTreeVisitor implemen
           final Block parent = rootBlocks.peek().nearestBlock(parameter);
           final boolean isMutable = isAnnotatedByConfiguredAnnotation(parameter);
 
-          LocalVariable.create(parent, parameter, isMutable, true);
+          Variable.createMethodParameter(parent, parameter, isMutable);
         });
 
     } finally {
@@ -128,9 +120,9 @@ public class ForbiddenVariableReassignmentCheck extends BaseTreeVisitor implemen
       final Block parent = rootBlocks.peek().nearestBlock(tree);
 
       final boolean isAlreadyDefined = parent.children().stream()
-        .filter(LocalVariable.class::isInstance)
-        .map(LocalVariable.class::cast)
-        .map(LocalVariable::name)
+        .filter(Variable.class::isInstance)
+        .map(Variable.class::cast)
+        .map(Variable::name)
         .anyMatch(tree.simpleName().name()::equals);
 
       if (isAlreadyDefined) return; // possibly it is a method parameter and was defined in `visitMethod`
@@ -138,7 +130,7 @@ public class ForbiddenVariableReassignmentCheck extends BaseTreeVisitor implemen
       final boolean hasInitialValue = tree.initializer() != null;
       final boolean isMutable = isAnnotatedByConfiguredAnnotation(tree);
 
-      LocalVariable.create(parent, tree, isMutable, hasInitialValue);
+      Variable.createLocalVariable(parent, tree, isMutable, hasInitialValue);
     } finally {
       super.visitVariable(tree);
     }
@@ -150,15 +142,11 @@ public class ForbiddenVariableReassignmentCheck extends BaseTreeVisitor implemen
       if (!tree.is(HANDLED_UNARY_OPERATOR)) return;
 
       final String variableName = getVariableName(tree.expression());
-      final LocalVariable variable = rootBlocks.peek().findVariable(variableName, tree);
+      final Variable variable = rootBlocks.peek().findVariable(variableName, tree);
 
       if (variable == null) return;
 
-      reportErrorIfAssignmentWasIllegal(
-        variable,
-        variable.assignValue(rootBlocks.peek().nearestBlock(tree), tree),
-        tree
-      );
+      reportErrorIfAssignmentWasIllegal(variable.assignValue(rootBlocks.peek().nearestBlock(tree), tree));
 
     } finally {
       super.visitUnaryExpression(tree);
@@ -173,16 +161,12 @@ public class ForbiddenVariableReassignmentCheck extends BaseTreeVisitor implemen
       if (KEYWORD_THIS.equals(tree.firstToken().text())) return; // we're dealing with a class member, not local variable
 
       final String variableName = getVariableName(tree.variable());
-      final LocalVariable variable = rootBlocks.peek().findVariable(variableName, tree);
+      final Variable variable = rootBlocks.peek().findVariable(variableName, tree);
 
       // it means it's not defined at all or not local
       if (variable == null) return;
 
-      reportErrorIfAssignmentWasIllegal(
-        variable,
-        variable.assignValue(rootBlocks.peek().nearestBlock(tree), tree),
-        tree
-      );
+      reportErrorIfAssignmentWasIllegal(variable.assignValue(rootBlocks.peek().nearestBlock(tree), tree));
 
     } finally {
       super.visitAssignmentExpression(tree);
@@ -302,82 +286,34 @@ public class ForbiddenVariableReassignmentCheck extends BaseTreeVisitor implemen
     }
   }
 
-  private boolean isInsideLoop(Tree cursor) {
-    return recursivelyGetParentLoopStatementTree(cursor) != null;
-  }
+  private void reportErrorIfAssignmentWasIllegal(ValueAssignationExpression expression) {
 
-  private boolean isInsideLoopParenthesis(Tree cursor) {
-    final Tree loopStatementTree = recursivelyGetParentLoopStatementTree(cursor);
-    if (loopStatementTree == null) return false;
+    final Variable variable = expression.variable();
+    final boolean handles =
+      (expression.isInsideLoop() && forbidReassignmentInsideLoop) ||
+      (variable.isLocal() && forbidLocalVariableReassignment) ||
+      (variable.isMethodParameter() && forbidMethodParameterReassignment);
 
-    final SyntaxToken openToken;
-    final SyntaxToken closeToken;
+    if (variable.isMutable() || !handles) return;
 
-    switch (loopStatementTree.kind()) {
-      case WHILE_STATEMENT:
-        openToken = ((WhileStatementTree) loopStatementTree).openParenToken();
-        closeToken = ((WhileStatementTree) loopStatementTree).closeParenToken();
-        break;
-      case DO_STATEMENT:
-        openToken = ((DoWhileStatementTree) loopStatementTree).openParenToken();
-        closeToken = ((DoWhileStatementTree) loopStatementTree).closeParenToken();
-        break;
-      case FOR_STATEMENT:
-        openToken = ((ForStatementTree) loopStatementTree).openParenToken();
-        closeToken = ((ForStatementTree) loopStatementTree).closeParenToken();
-        break;
-      case FOR_EACH_STATEMENT:
-        openToken = ((ForEachStatement) loopStatementTree).openParenToken();
-        closeToken = ((ForEachStatement) loopStatementTree).closeParenToken();
-        break;
-      default:
-        return false;
-    }
-
-    return isWithin(openToken, closeToken, cursor);
-  }
-
-  private Tree recursivelyGetParentLoopStatementTree(Tree cursor) {
-    for (
-      Tree parent = cursor.parent();
-      parent != null;
-      parent = parent.parent()
-    ) {
-      if (parent.is(LOOP_TREE)) {
-        return parent;
-      }
-    }
-    return null;
-  }
-
-  private void reportErrorIfAssignmentWasIllegal(LocalVariable variable,
-                                                 ValueAssignationExpression assignationExpression,
-                                                 Tree tree) {
-
-    if (forbidVariableReassignmentInsideLoop && variable.isImmutable() && isInsideLoop(tree)) {
-      if (isInsideLoopParenthesis(tree)) {
-        return;
-      }
-      reportIssue(assignationExpression, variableReassignedInsideLoopMessageTemplate);
+    if (expression.isInsideLoop()) {
+      if (expression.isInsideLoopParenthesis()) return;
+      reportIssueInsideLoop(expression);
       return;
     }
 
-    if (!forbidVariableReassignment) return;
-
     final List<ValueAssignationExpression> expressions = variable.assignationExpressions();
 
-    if (variable.isMutable()) return;
-
-    if (variable.hasInitialValue()) {
-      reportIssue(assignationExpression, variableReassignedMessageTemplate);
+    if (variable.hasInitialValue() || variable.isMethodParameter()) {
+      reportIssueOutsideOfLoop(expression);
       return;
     }
 
     for (ValueAssignationExpression previousAssignationExpression : expressions) {
-      if (previousAssignationExpression == assignationExpression ||
-        areExpressionsMutuallyExclusive(previousAssignationExpression, assignationExpression)) continue;
+      if (previousAssignationExpression == expression ||
+        areExpressionsMutuallyExclusive(previousAssignationExpression, expression)) continue;
 
-      reportIssue(assignationExpression, variableReassignedMessageTemplate);
+      reportIssueOutsideOfLoop(expression);
       return;
     }
   }
@@ -399,11 +335,24 @@ public class ForbiddenVariableReassignmentCheck extends BaseTreeVisitor implemen
       .orElse(null);
   }
 
+  private void reportIssueInsideLoop(ValueAssignationExpression expression) {
+    reportIssue(expression, variableReassignedInsideLoopMessageTemplate);
+  }
+
+  private void reportIssueOutsideOfLoop(ValueAssignationExpression expression) {
+    reportIssue(
+      expression,
+      expression.variable().isLocal()
+        ? variableReassignedMessageTemplate
+        : methodParameterReassignedMessageTemplate
+    );
+  }
+
   private void reportIssue(ValueAssignationExpression expression, String messageTemplate) {
 
     int line = expression.firstToken().line();
     final String message = Optional.ofNullable(messageTemplate).orElse(DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE)
-      .replace(PARAM_VARIABLE_NAME, expression.localVariable().name())
+      .replace(PARAM_VARIABLE_NAME, expression.variable().name())
       .replace(PARAM_LINE_NUMBER,   Integer.toString(line))
       .replace(PARAM_COLUMN_NUMBER, Integer.toString(expression.firstToken().column()));
 
