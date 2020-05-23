@@ -3,6 +3,11 @@ class BasicTestCase {
   private int field1 = 2;
   private int field2;
 
+  void methodParametersCase (int x, int y) {
+    x = 4; // Noncompliant
+    y++; // Noncompliant
+  }
+
   {
 
     @CustomMutable int mutableVariable1 = 1;

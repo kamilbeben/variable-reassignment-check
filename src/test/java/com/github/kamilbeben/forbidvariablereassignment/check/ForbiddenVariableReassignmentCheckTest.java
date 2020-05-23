@@ -3,11 +3,11 @@ package com.github.kamilbeben.forbidvariablereassignment.check;
 import org.junit.Test;
 import org.sonar.java.checks.verifier.JavaCheckVerifier;
 
-public class CheckTest {
+public class ForbiddenVariableReassignmentCheckTest {
 
   @Test
   public void basicTest() {
-    Check check = constructCheck();
+    ForbiddenVariableReassignmentCheck check = constructCheck();
     check.mutableAnnotationName = "CustomMutable";
 
     JavaCheckVerifier.newVerifier()
@@ -48,14 +48,14 @@ public class CheckTest {
       .verifyIssues();
   }
 
-  public Check constructCheck() {
-    Check check = new Check();
+  public ForbiddenVariableReassignmentCheck constructCheck() {
+    ForbiddenVariableReassignmentCheck check = new ForbiddenVariableReassignmentCheck();
 
-    check.mutableAnnotationName = Utils.DEFAULT_MUTABLE_ANNOTATION_NAME;
-    check.variableReassignedMessageTemplate = Utils.DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE;
-    check.variableReassignedInsideLoopMessageTemplate = Utils.DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE;
-    check.forbidVariableReassignmentInsideLoop = Boolean.valueOf(Utils.DEFAULT_FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP);
-    check.forbidVariableReassignment = Boolean.valueOf(Utils.DEFAULT_FORBID_VARIABLE_REASSIGNMENT);
+    check.mutableAnnotationName = ForbiddenVariableReassignmentUtils.DEFAULT_MUTABLE_ANNOTATION_NAME;
+    check.variableReassignedMessageTemplate = ForbiddenVariableReassignmentUtils.DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE;
+    check.variableReassignedInsideLoopMessageTemplate = ForbiddenVariableReassignmentUtils.DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE;
+    check.forbidVariableReassignmentInsideLoop = Boolean.valueOf(ForbiddenVariableReassignmentUtils.DEFAULT_FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP);
+    check.forbidVariableReassignment = Boolean.valueOf(ForbiddenVariableReassignmentUtils.DEFAULT_FORBID_VARIABLE_REASSIGNMENT);
 
     return check;
   }

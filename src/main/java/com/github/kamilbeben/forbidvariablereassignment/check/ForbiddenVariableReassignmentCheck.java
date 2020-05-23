@@ -13,7 +13,7 @@ import org.sonar.plugins.java.api.tree.*;
 
 import java.util.*;
 
-import static com.github.kamilbeben.forbidvariablereassignment.check.Utils.*;
+import static com.github.kamilbeben.forbidvariablereassignment.check.ForbiddenVariableReassignmentUtils.*;
 import static org.sonar.check.Priority.MINOR;
 import static org.sonar.plugins.java.api.tree.Tree.Kind.ANNOTATION;
 
@@ -22,9 +22,9 @@ import static org.sonar.plugins.java.api.tree.Tree.Kind.ANNOTATION;
   description = CHECK_DESCRIPTION,
   priority = MINOR
 )
-public class Check extends BaseTreeVisitor implements JavaFileScanner {
+public class ForbiddenVariableReassignmentCheck extends BaseTreeVisitor implements JavaFileScanner {
 
-  // TODO method parameters
+  // TODO registrar
   // TODO html example
 
   @RuleProperty(
@@ -69,6 +69,26 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
   }
 
   @Override
+  public void visitMethod(MethodTree tree) {
+    try {
+      rootBlocks.push(Block.create(null, tree, Block.Type.INEVITABLE));
+
+      tree.parameters()
+        .forEach(parameter -> {
+
+          final Block parent = rootBlocks.peek().nearestBlock(parameter);
+          final boolean isMutable = isAnnotatedByConfiguredAnnotation(parameter);
+
+          LocalVariable.create(parent, parameter, isMutable, true);
+        });
+
+    } finally {
+      super.visitMethod(tree);
+      rootBlocks.pop();
+    }
+  }
+
+  @Override
   public void visitBlock(BlockTree tree) {
     if (rootBlocks.isEmpty()) {
       visitRootBlock(tree);
@@ -106,6 +126,15 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
       if (rootBlocks.isEmpty()) return; // we're probably in a class, enum or something like that
 
       final Block parent = rootBlocks.peek().nearestBlock(tree);
+
+      final boolean isAlreadyDefined = parent.children().stream()
+        .filter(LocalVariable.class::isInstance)
+        .map(LocalVariable.class::cast)
+        .map(LocalVariable::name)
+        .anyMatch(tree.simpleName().name()::equals);
+
+      if (isAlreadyDefined) return; // possibly it is a method parameter and was defined in `visitMethod`
+
       final boolean hasInitialValue = tree.initializer() != null;
       final boolean isMutable = isAnnotatedByConfiguredAnnotation(tree);
 
@@ -141,11 +170,12 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
     try {
 
       if (rootBlocks.isEmpty()) return;  // we're probably in a class, enum or something like that
+      if (KEYWORD_THIS.equals(tree.firstToken().text())) return; // we're dealing with a class member, not local variable
 
       final String variableName = getVariableName(tree.variable());
       final LocalVariable variable = rootBlocks.peek().findVariable(variableName, tree);
 
-      // it means it's either a method parameter, not defined att all or not local
+      // it means it's not defined at all or not local
       if (variable == null) return;
 
       reportErrorIfAssignmentWasIllegal(

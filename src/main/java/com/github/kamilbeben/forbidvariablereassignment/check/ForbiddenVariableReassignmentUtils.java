@@ -5,12 +5,12 @@ import org.sonar.plugins.java.api.tree.Tree;
 
 import static org.sonar.plugins.java.api.tree.Tree.Kind.*;
 
-public class Utils {
+public class ForbiddenVariableReassignmentUtils {
 
-  private Utils() {}
+  private ForbiddenVariableReassignmentUtils() {}
 
-  public static final String CHECK_NAME = "ForbidVariableReassignment";
-  public static final String CHECK_DESCRIPTION = ""; // TODO text
+  static final String CHECK_NAME = "ForbidVariableReassignment";
+  static final String CHECK_DESCRIPTION = ""; // TODO text
 
   static final String PARAM_VARIABLE_NAME = "{variableName}";
   static final String PARAM_LINE_NUMBER = "{lineNumber}";
@@ -32,6 +32,7 @@ public class Utils {
   static final String DEFAULT_MUTABLE_ANNOTATION_NAME = "Mutable";
   static final String MUTABLE_ANNOTATION_DESCRIPTION = ""; // TODO text
 
+  static final String KEYWORD_THIS = "this";
   static Tree.Kind[] LOOP_TREE = { WHILE_STATEMENT, DO_STATEMENT, FOR_STATEMENT, FOR_EACH_STATEMENT };
   static Tree.Kind[] BREAK_OUT_OF_SWITCH_EXPRESSION = { BREAK_STATEMENT, RETURN_STATEMENT };
   static Tree.Kind[] HANDLED_UNARY_OPERATOR = { PREFIX_INCREMENT, PREFIX_DECREMENT, POSTFIX_DECREMENT, POSTFIX_INCREMENT };

@@ -138,7 +138,7 @@
                 <configuration>
                     <pluginKey>java-custom</pluginKey>
                     <pluginName>Java Custom Rules</pluginName>
-                    <pluginClass>com.github.kamilbeben.forbidvariablereassignment.Plugin</pluginClass>
+                    <pluginClass>com.github.kamilbeben.forbidvariablereassignment.ForbiddenVariableReassignmentPlugin</pluginClass>
                     <sonarLintSupported>true</sonarLintSupported>
                     <sonarQubeMinVersion>7.9</sonarQubeMinVersion>
                     <requirePlugins>java:${sonarjava.version}</requirePlugins>
