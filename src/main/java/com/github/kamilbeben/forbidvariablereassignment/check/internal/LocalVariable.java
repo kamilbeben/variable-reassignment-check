@@ -1,7 +1,7 @@
 package com.github.kamilbeben.forbidvariablereassignment.check.internal;
 
 import com.google.common.collect.ImmutableList;
-import org.sonar.plugins.java.api.tree.AssignmentExpressionTree;
+import org.sonar.plugins.java.api.tree.Tree;
 import org.sonar.plugins.java.api.tree.VariableTree;
 
 import java.util.ArrayList;
@@ -26,8 +26,8 @@ public class LocalVariable extends BlockChild {
     return new LocalVariable(parent, tree, mutable, hasInitialValue);
   }
 
-  public ValueAssignationExpression assignValue(Block parent, AssignmentExpressionTree assignmentExpressionTree) {
-    final ValueAssignationExpression expression = new ValueAssignationExpression(parent, this, assignmentExpressionTree);
+  public ValueAssignationExpression assignValue(Block parent, Tree tree) {
+    final ValueAssignationExpression expression = new ValueAssignationExpression(parent, this, tree);
     assignationExpressions.add(expression);
     return expression;
   }

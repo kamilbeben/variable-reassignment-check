@@ -88,10 +88,10 @@ class BasicTestCase {
     z = c ? 1 : 2;  // Noncompliant
 
     int err6 = 1;
-    err6++;    // TODO configurable
-    err6--;    // TODO
-    ++err6;    // TODO
-    --err6;    // TODO
+    err6++;    // Noncompliant
+    err6--;    // Noncompliant
+    ++err6;    // Noncompliant
+    --err6;    // Noncompliant
     err6 += 1; // Noncompliant
     err6 -= 1; // Noncompliant
     err6 *= 1; // Noncompliant

@@ -51,11 +51,11 @@ public class CheckTest {
   public Check constructCheck() {
     Check check = new Check();
 
-    check.mutableAnnotationName = Const.DEFAULT_MUTABLE_ANNOTATION_NAME;
-    check.variableReassignedMessageTemplate = Const.DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE;
-    check.variableReassignedInsideLoopMessageTemplate = Const.DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE;
-    check.forbidVariableReassignmentInsideLoop = Boolean.valueOf(Const.DEFAULT_FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP);
-    check.forbidVariableReassignment = Boolean.valueOf(Const.DEFAULT_FORBID_VARIABLE_REASSIGNMENT);
+    check.mutableAnnotationName = Utils.DEFAULT_MUTABLE_ANNOTATION_NAME;
+    check.variableReassignedMessageTemplate = Utils.DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE;
+    check.variableReassignedInsideLoopMessageTemplate = Utils.DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE;
+    check.forbidVariableReassignmentInsideLoop = Boolean.valueOf(Utils.DEFAULT_FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP);
+    check.forbidVariableReassignment = Boolean.valueOf(Utils.DEFAULT_FORBID_VARIABLE_REASSIGNMENT);
 
     return check;
   }

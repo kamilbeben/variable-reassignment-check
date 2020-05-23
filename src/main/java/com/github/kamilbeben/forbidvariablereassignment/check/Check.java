@@ -13,6 +13,7 @@ import org.sonar.plugins.java.api.tree.*;
 
 import java.util.*;
 
+import static com.github.kamilbeben.forbidvariablereassignment.check.Utils.*;
 import static org.sonar.check.Priority.MINOR;
 import static org.sonar.plugins.java.api.tree.Tree.Kind.ANNOTATION;
 
@@ -23,36 +24,35 @@ import static org.sonar.plugins.java.api.tree.Tree.Kind.ANNOTATION;
 )
 public class Check extends BaseTreeVisitor implements JavaFileScanner {
 
-  // TODO ++, -- lub opisz ze pomijasz i dlaczego pomijasz
   // TODO method parameters
   // TODO html example
 
   @RuleProperty(
-    defaultValue = Const.DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE,
+    defaultValue = Utils.DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE,
     description = "" // TODO text
   )
   String variableReassignedMessageTemplate;
 
   @RuleProperty(
-    defaultValue = Const.DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE,
+    defaultValue = Utils.DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE,
     description = "" // TODO text
   )
   String variableReassignedInsideLoopMessageTemplate;
 
   @RuleProperty(
-    defaultValue = Const.DEFAULT_FORBID_VARIABLE_REASSIGNMENT,
+    defaultValue = Utils.DEFAULT_FORBID_VARIABLE_REASSIGNMENT,
     description = "" // TODO text
   )
   boolean forbidVariableReassignment;
 
   @RuleProperty(
-    defaultValue = Const.DEFAULT_FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP,
+    defaultValue = Utils.DEFAULT_FORBID_VARIABLE_REASSIGNMENT_INSIDE_LOOP,
     description = "" // TODO text
   )
   boolean forbidVariableReassignmentInsideLoop;
 
   @RuleProperty(
-    defaultValue = Const.DEFAULT_MUTABLE_ANNOTATION_NAME,
+    defaultValue = Utils.DEFAULT_MUTABLE_ANNOTATION_NAME,
     description = "" // TODO text
   )
   String mutableAnnotationName;
@@ -116,12 +116,33 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
   }
 
   @Override
+  public void visitUnaryExpression(UnaryExpressionTree tree) {
+    try {
+      if (!tree.is(HANDLED_UNARY_OPERATOR)) return;
+
+      final String variableName = getVariableName(tree.expression());
+      final LocalVariable variable = rootBlocks.peek().findVariable(variableName, tree);
+
+      if (variable == null) return;
+
+      reportErrorIfAssignmentWasIllegal(
+        variable,
+        variable.assignValue(rootBlocks.peek().nearestBlock(tree), tree),
+        tree
+      );
+
+    } finally {
+      super.visitUnaryExpression(tree);
+    }
+  }
+
+  @Override
   public void visitAssignmentExpression(AssignmentExpressionTree tree) {
     try {
 
       if (rootBlocks.isEmpty()) return;  // we're probably in a class, enum or something like that
 
-      final String variableName = getVariableName(tree);
+      final String variableName = getVariableName(tree.variable());
       final LocalVariable variable = rootBlocks.peek().findVariable(variableName, tree);
 
       // it means it's either a method parameter, not defined att all or not local
@@ -212,8 +233,7 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
       .forEach(caseGroupTree -> {
         mutuallyInclusiveCaseGroupTrees.add(caseGroupTree);
 
-        final boolean hasBreakOrReturnStatement = caseGroupTree.body().stream().map(Tree::kind)
-          .anyMatch(Const.BREAK_OUT_OF_SWITCH_EXPRESSION_KINDS::contains);
+        final boolean hasBreakOrReturnStatement = caseGroupTree.body().stream().anyMatch(it -> it.is(BREAK_OUT_OF_SWITCH_EXPRESSION));
 
         if (hasBreakOrReturnStatement) {
           mutuallyExclusiveCaseGroupTreeLists.add(ImmutableList.copyOf(mutuallyInclusiveCaseGroupTrees));
@@ -239,38 +259,75 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
       .anyMatch(it -> Objects.equals(it, mutableAnnotationName));
   }
 
-  private String getVariableName(AssignmentExpressionTree tree) {
-    final ExpressionTree variable = tree.variable();
+  private String getVariableName(ExpressionTree tree) {
 
-    switch (variable.kind()) {
+    switch (tree.kind()) {
       case MEMBER_SELECT:
-        return ((MemberSelectExpressionTree) variable).identifier().name();
+        return ((MemberSelectExpressionTree) tree).identifier().name();
       case IDENTIFIER:
-        return ((IdentifierTree) variable).name();
+        return ((IdentifierTree) tree).name();
       default:
-        System.err.println("Couldn't get variable name out of tree of kind " + variable.kind() + " at line " + tree.firstToken().line());
+        System.err.println("Couldn't get variable name out of tree of kind " + tree.kind() + " at line " + tree.firstToken().line());
         return null;
     }
   }
 
-  private boolean isInsideLoop(Tree tree) {
+  private boolean isInsideLoop(Tree cursor) {
+    return recursivelyGetParentLoopStatementTree(cursor) != null;
+  }
+
+  private boolean isInsideLoopParenthesis(Tree cursor) {
+    final Tree loopStatementTree = recursivelyGetParentLoopStatementTree(cursor);
+    if (loopStatementTree == null) return false;
+
+    final SyntaxToken openToken;
+    final SyntaxToken closeToken;
+
+    switch (loopStatementTree.kind()) {
+      case WHILE_STATEMENT:
+        openToken = ((WhileStatementTree) loopStatementTree).openParenToken();
+        closeToken = ((WhileStatementTree) loopStatementTree).closeParenToken();
+        break;
+      case DO_STATEMENT:
+        openToken = ((DoWhileStatementTree) loopStatementTree).openParenToken();
+        closeToken = ((DoWhileStatementTree) loopStatementTree).closeParenToken();
+        break;
+      case FOR_STATEMENT:
+        openToken = ((ForStatementTree) loopStatementTree).openParenToken();
+        closeToken = ((ForStatementTree) loopStatementTree).closeParenToken();
+        break;
+      case FOR_EACH_STATEMENT:
+        openToken = ((ForEachStatement) loopStatementTree).openParenToken();
+        closeToken = ((ForEachStatement) loopStatementTree).closeParenToken();
+        break;
+      default:
+        return false;
+    }
+
+    return Utils.isWithin(openToken, closeToken, cursor);
+  }
+
+  private Tree recursivelyGetParentLoopStatementTree(Tree cursor) {
     for (
-      Tree parent = tree.parent();
+      Tree parent = cursor.parent();
       parent != null;
       parent = parent.parent()
     ) {
-      if (Const.LOOP_TREE_KINDS.contains(parent.kind())) {
-        return true;
+      if (parent.is(LOOP_TREE)) {
+        return parent;
       }
     }
-    return false;
+    return null;
   }
 
   private void reportErrorIfAssignmentWasIllegal(LocalVariable variable,
                                                  ValueAssignationExpression assignationExpression,
-                                                 AssignmentExpressionTree tree) {
+                                                 Tree tree) {
 
     if (forbidVariableReassignmentInsideLoop && variable.isImmutable() && isInsideLoop(tree)) {
+      if (isInsideLoopParenthesis(tree)) {
+        return;
+      }
       reportIssue(assignationExpression, variableReassignedInsideLoopMessageTemplate);
       return;
     }
@@ -315,10 +372,10 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
   private void reportIssue(ValueAssignationExpression expression, String messageTemplate) {
 
     int line = expression.firstToken().line();
-    final String message = Optional.ofNullable(messageTemplate).orElse(Const.DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE)
-      .replace(Const.PARAM_VARIABLE_NAME, expression.localVariable().name())
-      .replace(Const.PARAM_LINE_NUMBER,   Integer.toString(line))
-      .replace(Const.PARAM_COLUMN_NUMBER, Integer.toString(expression.firstToken().column()));
+    final String message = Optional.ofNullable(messageTemplate).orElse(Utils.DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE)
+      .replace(Utils.PARAM_VARIABLE_NAME, expression.localVariable().name())
+      .replace(Utils.PARAM_LINE_NUMBER,   Integer.toString(line))
+      .replace(Utils.PARAM_COLUMN_NUMBER, Integer.toString(expression.firstToken().column()));
 
     fileScannerContext.addIssue(line, this, message);
   }

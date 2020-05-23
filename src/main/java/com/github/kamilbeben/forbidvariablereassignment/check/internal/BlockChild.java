@@ -1,5 +1,6 @@
 package com.github.kamilbeben.forbidvariablereassignment.check.internal;
 
+import com.github.kamilbeben.forbidvariablereassignment.check.Utils;
 import org.sonar.plugins.java.api.tree.SyntaxToken;
 import org.sonar.plugins.java.api.tree.Tree;
 
@@ -44,21 +45,7 @@ public abstract class BlockChild {
   }
 
   public boolean contains(Tree cursor) {
-    final boolean startsBeforeCursor =
-      firstToken.line() < cursor.firstToken().line() ||
-      (
-        firstToken.line() == cursor.firstToken().line() &&
-        firstToken.column() <= cursor.firstToken().column()
-      );
-
-    final boolean endsAfterCursor =
-      lastToken.line() > cursor.lastToken().line() ||
-      (
-        lastToken.line() == cursor.lastToken().line() &&
-        lastToken.column() >= cursor.lastToken().column()
-      );
-
-    return startsBeforeCursor && endsAfterCursor;
+    return Utils.isWithin(firstToken, lastToken, cursor);
   }
 
   public boolean startsAt(SyntaxToken token) {
