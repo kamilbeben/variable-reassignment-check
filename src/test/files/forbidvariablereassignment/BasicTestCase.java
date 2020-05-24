@@ -6,6 +6,15 @@ class BasicTestCase {
   void methodParametersCase (int x, int y) {
     x = 4; // Noncompliant
     y++; // Noncompliant
+
+    int i = 0;
+    for (; i < size; i++) { // Noncompliant
+      System.out.println(i);
+    }
+
+    for (int k=0; k < size; k++) {
+      System.out.println(k);
+    }
   }
 
   {

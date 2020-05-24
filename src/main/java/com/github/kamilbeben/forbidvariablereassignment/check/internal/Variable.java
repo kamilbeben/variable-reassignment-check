@@ -1,5 +1,6 @@
 package com.github.kamilbeben.forbidvariablereassignment.check.internal;
 
+import com.github.kamilbeben.forbidvariablereassignment.check.ForbiddenVariableReassignmentUtils;
 import com.google.common.collect.ImmutableList;
 import org.sonar.plugins.java.api.tree.Tree;
 import org.sonar.plugins.java.api.tree.VariableTree;
@@ -17,6 +18,8 @@ public class Variable extends BlockChild {
   private final String name;
   private final boolean isMutable;
   private final boolean hasInitialValue;
+  private final boolean isInsideLoop;
+  private final boolean isInsideLoopParenthesis;
   private final Type type;
   private final List<ValueAssignationExpression> assignationExpressions = new ArrayList<>();
 
@@ -26,6 +29,8 @@ public class Variable extends BlockChild {
     this.isMutable = isMutable;
     this.hasInitialValue = hasInitialValue;
     this.type = type;
+    this.isInsideLoop = ForbiddenVariableReassignmentUtils.isInsideLoop(tree);
+    this.isInsideLoopParenthesis = ForbiddenVariableReassignmentUtils.isInsideLoopParenthesis(tree);
     parent.addChild(this);
   }
 
@@ -61,6 +66,14 @@ public class Variable extends BlockChild {
 
   public boolean isMethodParameter() {
     return type == Type.METHOD_PARAMETER;
+  }
+
+  public boolean isInsideLoop() {
+    return isInsideLoop;
+  }
+
+  public boolean isInsideLoopParenthesis() {
+    return isInsideLoopParenthesis;
   }
 
   public List<ValueAssignationExpression> assignationExpressions() {

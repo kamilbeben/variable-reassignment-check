@@ -18,7 +18,8 @@ import static org.sonar.check.Priority.MINOR;
 import static org.sonar.plugins.java.api.tree.Tree.Kind.ANNOTATION;
 
 @Rule(
-  key = CHECK_NAME,
+  key = CHECK_KEY,
+  name = CHECK_NAME,
   description = CHECK_DESCRIPTION,
   priority = MINOR
 )
@@ -297,9 +298,12 @@ public class ForbiddenVariableReassignmentCheck extends BaseTreeVisitor implemen
     if (variable.isMutable() || !handles) return;
 
     if (expression.isInsideLoop()) {
-      if (expression.isInsideLoopParenthesis()) return;
-      reportIssueInsideLoop(expression);
-      return;
+      if (expression.isInsideLoopParenthesis() && variable.isInsideLoopParenthesis()) return;
+
+      if (!variable.isInsideLoop()) {
+        reportIssueInsideLoop(expression);
+        return;
+      }
     }
 
     final List<ValueAssignationExpression> expressions = variable.assignationExpressions();

@@ -20,10 +20,16 @@ class LoopTestCase {
     } while(i++ > -10);
 
     int k = 5;
-    while (k++ < 30) {
+    while (k++ < 30) { // Noncompliant
       k++; // Noncompliant
       k += 2; // Noncompliant
       System.out.println(k);
+    }
+
+    while (c) {
+      int d;
+      d = 5;
+      d = 53; // Noncompliant
     }
   }
 

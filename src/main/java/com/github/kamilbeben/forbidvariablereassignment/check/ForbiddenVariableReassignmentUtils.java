@@ -1,7 +1,6 @@
 package com.github.kamilbeben.forbidvariablereassignment.check;
 
-import org.sonar.plugins.java.api.tree.SyntaxToken;
-import org.sonar.plugins.java.api.tree.Tree;
+import org.sonar.plugins.java.api.tree.*;
 
 import static org.sonar.plugins.java.api.tree.Tree.Kind.*;
 
@@ -9,9 +8,40 @@ public class ForbiddenVariableReassignmentUtils {
 
   private ForbiddenVariableReassignmentUtils() {}
 
-  static final String CHECK_NAME = "forbid-variable-reassignment";
-  static final String CHECK_DESCRIPTION = "Reassigning variables (oh, the irony) adds unnecessary layer of complexity to the code and, " +
-    "in most cases it means that the code simply could be better (for example, some parts could be extracted to another method)";
+  static final String CHECK_KEY = "forbid-variable-reassignment";
+  static final String CHECK_NAME = "Forbid variable reassignment";
+
+  static final String CHECK_DESCRIPTION =
+    "<p>" +
+      "Reassigning variables (oh, the irony) adds unnecessary layer of complexity to the code and, " +
+        "in most cases it means that the code simply could be better (for example, some parts could be extracted to another method)" +
+    "</p>" +
+    "<p>" +
+      "<h1>Noncompliant example</h1>" +
+      "<pre>" +
+        "void foo(Bar bar) {\n" +
+        "  String barName = bar.getName();\n" +
+        "  if (barName == null) {\n" +
+        "    barName = \"defaultName\"; // Noncompliant\n" +
+        "  }\n" +
+        "}" +
+      "</pre>" +
+    "</p>" +
+    "<p>" +
+      "<h1> Compliant solution example 1</h1>" +
+      "<pre>" +
+        "void foo(Bar bar) {\n" +
+        "  String barName = Optional.ofNullable(bar.getName()).orElse(\"defaultName\");\n" +
+        "}" +
+      "</pre>" +
+    "</p>" +
+    "<p>" +
+      "<h1>Exceptions</h1>" +
+      "<ul>" +
+        "<li> Variables defined in loop's parenthesis, for example <pre>for (int i=0; i < size; i++) {}</pre> </li>" +
+        "<li> Class members </li>" +
+      "</ul>" +
+    "</p>";
 
   static final String PARAM_VARIABLE_NAME = "{variableName}";
   static final String PARAM_LINE_NUMBER = "{lineNumber}";
@@ -66,5 +96,53 @@ public class ForbiddenVariableReassignmentUtils {
         );
 
     return startsBeforeCursor && endsAfterCursor;
+  }
+
+  public static boolean isInsideLoop(Tree cursor) {
+    return recursivelyGetParentLoopStatementTree(cursor) != null;
+  }
+
+  public static boolean isInsideLoopParenthesis(Tree cursor) {
+    final Tree loopStatementTree = recursivelyGetParentLoopStatementTree(cursor);
+    if (loopStatementTree == null) return false;
+
+    final SyntaxToken openToken;
+    final SyntaxToken closeToken;
+
+    switch (loopStatementTree.kind()) {
+      case WHILE_STATEMENT:
+        openToken = ((WhileStatementTree) loopStatementTree).openParenToken();
+        closeToken = ((WhileStatementTree) loopStatementTree).closeParenToken();
+        break;
+      case DO_STATEMENT:
+        openToken = ((DoWhileStatementTree) loopStatementTree).openParenToken();
+        closeToken = ((DoWhileStatementTree) loopStatementTree).closeParenToken();
+        break;
+      case FOR_STATEMENT:
+        openToken = ((ForStatementTree) loopStatementTree).openParenToken();
+        closeToken = ((ForStatementTree) loopStatementTree).closeParenToken();
+        break;
+      case FOR_EACH_STATEMENT:
+        openToken = ((ForEachStatement) loopStatementTree).openParenToken();
+        closeToken = ((ForEachStatement) loopStatementTree).closeParenToken();
+        break;
+      default:
+        return false;
+    }
+
+    return isWithin(openToken, closeToken, cursor);
+  }
+
+  private static Tree recursivelyGetParentLoopStatementTree(Tree cursor) {
+    for (
+      Tree parent = cursor.parent();
+      parent != null;
+      parent = parent.parent()
+    ) {
+      if (parent.is(LOOP_TREE)) {
+        return parent;
+      }
+    }
+    return null;
   }
 }
