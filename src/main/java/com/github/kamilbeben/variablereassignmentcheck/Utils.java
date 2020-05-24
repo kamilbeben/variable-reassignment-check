@@ -2,6 +2,8 @@ package com.github.kamilbeben.variablereassignmentcheck;
 
 import org.sonar.plugins.java.api.tree.*;
 
+import static com.github.kamilbeben.variablereassignmentcheck.Constant.LOOP_TREE;
+
 public class Utils {
 
   private Utils() {}
@@ -65,7 +67,7 @@ public class Utils {
       parent != null;
       parent = parent.parent()
     ) {
-      if (parent.is(Constant.LOOP_TREE)) {
+      if (parent.is(LOOP_TREE)) {
         return parent;
       }
     }

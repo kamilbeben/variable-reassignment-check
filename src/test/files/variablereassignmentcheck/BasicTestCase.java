@@ -112,4 +112,10 @@ class BasicTestCase {
     err6 /= 1; // Noncompliant
   }
 
+  public static SomeObj validator(Consumer addError) {
+    SomeObj obj = new SomeObj();
+    obj.addError = addError;
+    return obj;
+  }
+
 }

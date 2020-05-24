@@ -41,6 +41,36 @@ public class CheckTest {
   }
 
   @Test
+  public void reportLocalVariableReassignmentDisabledTest() {
+    Check check = constructCheck();
+    check.reportLocalVariableReassignment = false;
+    JavaCheckVerifier.newVerifier()
+      .onFile("src/test/files/variablereassignmentcheck/ReportLocalVariableReassignmentDisabledTestCase.java")
+      .withCheck(check)
+      .verifyIssues();
+  }
+
+  @Test
+  public void reportMethodParameterReassignmentDisabledTest() {
+    Check check = constructCheck();
+    check.reportMethodParameterReassignment = false;
+    JavaCheckVerifier.newVerifier()
+      .onFile("src/test/files/variablereassignmentcheck/ReportMethodParameterDisabledTestCase.java")
+      .withCheck(check)
+      .verifyIssues();
+  }
+
+  @Test
+  public void reportReassignmentInsideLoopDisabledTest() {
+    Check check = constructCheck();
+    check.reportReassignmentInsideLoop = false;
+    JavaCheckVerifier.newVerifier()
+      .onFile("src/test/files/variablereassignmentcheck/ReportReassignmentInsideLoopTestCase.java")
+      .withCheck(check)
+      .verifyIssues();
+  }
+
+  @Test
   public void orderStatusTest() {
     JavaCheckVerifier.newVerifier()
       .onFile("src/test/files/variablereassignmentcheck/OrderStatus.java")

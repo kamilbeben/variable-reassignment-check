@@ -6,7 +6,7 @@ import org.sonar.api.server.rule.RulesDefinitionAnnotationLoader;
 public class Definition implements RulesDefinition {
 
   static final String REPOSITORY_KEY = "com.github.kamilbeben";
-  static final String REPOSITORY_NAME = "forbid-variable-reassignment-repository";
+  static final String REPOSITORY_NAME = "variable-reassignment-repository";
   static final String LANGUAGE = "java";
 
   private static final RulesDefinitionAnnotationLoader RULE_DEFINITION_LOADER = new RulesDefinitionAnnotationLoader();

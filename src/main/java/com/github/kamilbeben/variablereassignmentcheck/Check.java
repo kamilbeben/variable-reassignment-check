@@ -26,8 +26,6 @@ import static org.sonar.plugins.java.api.tree.Tree.Kind.ANNOTATION;
 )
 public class Check extends BaseTreeVisitor implements JavaFileScanner {
 
-  // TODO tests cases with non-default parameter values
-
   @RuleProperty(
     defaultValue = Parameter.ReportLocalVariableReassignment.DEFAULT,
     description = Parameter.ReportLocalVariableReassignment.DESCRIPTION
@@ -134,12 +132,13 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
         .map(Variable::name)
         .anyMatch(tree.simpleName().name()::equals);
 
-      if (isAlreadyDefined) return; // possibly it is a method parameter and was defined in `visitMethod`
+      if (isAlreadyDefined) return; // possibly it is a method parameter which was defined in `visitMethod`
 
       final boolean hasInitialValue = tree.initializer() != null;
       final boolean isMutable = isAnnotatedByConfiguredAnnotation(tree);
 
       Variable.createLocalVariable(parent, tree, isMutable, hasInitialValue);
+
     } finally {
       super.visitVariable(tree);
     }
@@ -165,15 +164,10 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
   @Override
   public void visitAssignmentExpression(AssignmentExpressionTree tree) {
     try {
-
-      if (rootBlocks.isEmpty()) return;  // we're probably in a class, enum or something like that
-      if (KEYWORD_THIS.equals(tree.firstToken().text())) return; // we're dealing with a class member, not local variable
-
       final String variableName = getVariableName(tree.variable());
       final Variable variable = rootBlocks.peek().findVariable(variableName, tree);
 
-      // it means it's not defined at all or not local
-      if (variable == null) return;
+      if (variable == null) return; // it means it's not local variable nor method parameter
 
       reportErrorIfAssignmentWasIllegal(variable.assignValue(rootBlocks.peek().nearestBlock(tree), tree));
 
@@ -200,7 +194,6 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
       if (isAlreadyDefined) return;
 
       final Block parent = rootBlocks.peek().nearestBlock(tree);
-
       Block.create(parent, tree, Block.Type.INEVITABLE);
 
     } finally {
@@ -209,7 +202,6 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
   }
 
   private void createConditionalBlocks(IfStatementTree tree) {
-
     final Block parent = rootBlocks.peek().nearestBlock(tree);
     final Block wrapper = Block.create(parent, tree, Block.Type.MUTUALLY_EXCLUSIVE_STATEMENTS_WRAPPER);
 
@@ -248,7 +240,6 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
   }
 
   private List<List<CaseGroupTree>> extractMutuallyExclusiveCaseGroupTreeLists(SwitchStatementTree tree) {
-
     final List<List<CaseGroupTree>> mutuallyExclusiveCaseGroupTreeLists = new ArrayList<>();
     final List<CaseGroupTree> mutuallyInclusiveCaseGroupTrees = new ArrayList<>();
 
@@ -256,7 +247,8 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
       .forEach(caseGroupTree -> {
         mutuallyInclusiveCaseGroupTrees.add(caseGroupTree);
 
-        final boolean hasBreakOrReturnStatement = caseGroupTree.body().stream().anyMatch(it -> it.is(BREAK_OUT_OF_SWITCH_EXPRESSION));
+        final boolean hasBreakOrReturnStatement = caseGroupTree.body().stream()
+          .anyMatch(it -> it.is(BREAK_OUT_OF_SWITCH_EXPRESSION));
 
         if (hasBreakOrReturnStatement) {
           mutuallyExclusiveCaseGroupTreeLists.add(ImmutableList.copyOf(mutuallyInclusiveCaseGroupTrees));
@@ -272,7 +264,6 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
   }
 
   private boolean isAnnotatedByConfiguredAnnotation(VariableTree tree) {
-
     if (StringUtils.isBlank(mutableAnnotationName)) return false;
 
     return tree.modifiers().stream()
@@ -283,10 +274,9 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
   }
 
   private String getVariableName(ExpressionTree tree) {
-
     switch (tree.kind()) {
       case MEMBER_SELECT:
-        return ((MemberSelectExpressionTree) tree).identifier().name();
+        return null; // member fields are not handled by this check
       case IDENTIFIER:
         return ((IdentifierTree) tree).name();
       default:
@@ -296,8 +286,8 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
   }
 
   private void reportErrorIfAssignmentWasIllegal(AssignationExpression expression) {
-
     final Variable variable = expression.variable();
+
     final boolean handles =
       (expression.isInsideLoop() && reportReassignmentInsideLoop) ||
       (variable.isLocal() && reportLocalVariableReassignment) ||
@@ -323,7 +313,7 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
 
     for (AssignationExpression previousAssignationExpression : expressions) {
       if (previousAssignationExpression == expression ||
-        areExpressionsMutuallyExclusive(previousAssignationExpression, expression)) continue;
+          areExpressionsMutuallyExclusive(previousAssignationExpression, expression)) continue;
 
       reportIssue(expression);
       return;
@@ -332,9 +322,10 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
 
   private boolean areExpressionsMutuallyExclusive(AssignationExpression a, AssignationExpression b) {
     final Block closestCommonAncestor = getClosestCommonAncestor(a, b);
+
     return
       closestCommonAncestor == null ||
-        closestCommonAncestor.type() == Block.Type.MUTUALLY_EXCLUSIVE_STATEMENTS_WRAPPER;
+      closestCommonAncestor.type() == Block.Type.MUTUALLY_EXCLUSIVE_STATEMENTS_WRAPPER;
   }
 
   private Block getClosestCommonAncestor(AssignationExpression a, AssignationExpression b) {
@@ -348,10 +339,12 @@ public class Check extends BaseTreeVisitor implements JavaFileScanner {
   }
 
   private void reportIssue(AssignationExpression expression) {
-
     int line = expression.firstToken().line();
-    final String message = Optional.ofNullable(messageTemplate).orElse(Parameter.MessageTemplate.DEFAULT)
-      .replace(Parameter.MessageTemplate.PARAM_VARIABLE_NAME, expression.variable().name());
+
+    final String message = Optional
+      .ofNullable(messageTemplate)
+      .orElse(Parameter.MessageTemplate.DEFAULT)
+        .replace(Parameter.MessageTemplate.PARAM_VARIABLE_NAME, expression.variable().name());
 
     fileScannerContext.addIssue(line, this, message);
   }
