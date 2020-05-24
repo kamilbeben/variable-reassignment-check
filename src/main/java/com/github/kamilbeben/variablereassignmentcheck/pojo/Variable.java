@@ -1,6 +1,6 @@
-package com.github.kamilbeben.forbidvariablereassignment.check.internal;
+package com.github.kamilbeben.variablereassignmentcheck.pojo;
 
-import com.github.kamilbeben.forbidvariablereassignment.check.ForbiddenVariableReassignmentUtils;
+import com.github.kamilbeben.variablereassignmentcheck.Utils;
 import com.google.common.collect.ImmutableList;
 import org.sonar.plugins.java.api.tree.Tree;
 import org.sonar.plugins.java.api.tree.VariableTree;
@@ -21,7 +21,7 @@ public class Variable extends BlockChild {
   private final boolean isInsideLoop;
   private final boolean isInsideLoopParenthesis;
   private final Type type;
-  private final List<ValueAssignationExpression> assignationExpressions = new ArrayList<>();
+  private final List<AssignationExpression> assignationExpressions = new ArrayList<>();
 
   protected Variable(Block parent, VariableTree tree, boolean isMutable, boolean hasInitialValue, Type type) {
     super(parent, tree.firstToken(), tree.lastToken());
@@ -29,8 +29,8 @@ public class Variable extends BlockChild {
     this.isMutable = isMutable;
     this.hasInitialValue = hasInitialValue;
     this.type = type;
-    this.isInsideLoop = ForbiddenVariableReassignmentUtils.isInsideLoop(tree);
-    this.isInsideLoopParenthesis = ForbiddenVariableReassignmentUtils.isInsideLoopParenthesis(tree);
+    this.isInsideLoop = Utils.isInsideLoop(tree);
+    this.isInsideLoopParenthesis = Utils.isInsideLoopParenthesis(tree);
     parent.addChild(this);
   }
 
@@ -42,8 +42,8 @@ public class Variable extends BlockChild {
     return new Variable(parent, tree, mutable, false, Type.METHOD_PARAMETER);
   }
 
-  public ValueAssignationExpression assignValue(Block parent, Tree tree) {
-    final ValueAssignationExpression expression = new ValueAssignationExpression(parent, this, tree);
+  public AssignationExpression assignValue(Block parent, Tree tree) {
+    final AssignationExpression expression = new AssignationExpression(parent, this, tree);
     assignationExpressions.add(expression);
     return expression;
   }
@@ -76,7 +76,7 @@ public class Variable extends BlockChild {
     return isInsideLoopParenthesis;
   }
 
-  public List<ValueAssignationExpression> assignationExpressions() {
+  public List<AssignationExpression> assignationExpressions() {
     return ImmutableList.copyOf(assignationExpressions);
   }
 

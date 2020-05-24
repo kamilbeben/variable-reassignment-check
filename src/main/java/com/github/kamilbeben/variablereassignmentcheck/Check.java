@@ -1,8 +1,8 @@
-package com.github.kamilbeben.forbidvariablereassignment.check;
+package com.github.kamilbeben.variablereassignmentcheck;
 
-import com.github.kamilbeben.forbidvariablereassignment.check.internal.Block;
-import com.github.kamilbeben.forbidvariablereassignment.check.internal.ValueAssignationExpression;
-import com.github.kamilbeben.forbidvariablereassignment.check.internal.Variable;
+import com.github.kamilbeben.variablereassignmentcheck.pojo.AssignationExpression;
+import com.github.kamilbeben.variablereassignmentcheck.pojo.Block;
+import com.github.kamilbeben.variablereassignmentcheck.pojo.Variable;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.lang.StringUtils;
 import org.sonar.check.Rule;
@@ -13,41 +13,49 @@ import org.sonar.plugins.java.api.tree.*;
 
 import java.util.*;
 
-import static com.github.kamilbeben.forbidvariablereassignment.check.ForbiddenVariableReassignmentUtils.*;
+import static com.github.kamilbeben.variablereassignmentcheck.Constant.*;
 import static org.sonar.check.Priority.MINOR;
 import static org.sonar.plugins.java.api.tree.Tree.Kind.ANNOTATION;
 
 @Rule(
-  key = CHECK_KEY,
-  name = CHECK_NAME,
-  description = CHECK_DESCRIPTION,
-  priority = MINOR
+  key = Constant.Check.KEY,
+  name = Constant.Check.NAME,
+  description = Constant.Check.DESCRIPTION,
+  priority = MINOR,
+  tags = { "brain-overload", "confusing", "bad-practice" }
 )
-public class ForbiddenVariableReassignmentCheck extends BaseTreeVisitor implements JavaFileScanner {
+public class Check extends BaseTreeVisitor implements JavaFileScanner {
 
   // TODO tests cases with non-default parameter values
-  // TODO registrar
-  // TODO html example
 
-  @RuleProperty(defaultValue = DEFAULT_FORBID_LOCAL_VARIABLE_REASSIGNMENT, description = FORBID_LOCAL_VARIABLE_REASSIGNMENT_DESCRIPTION)
-  boolean forbidLocalVariableReassignment;
+  @RuleProperty(
+    defaultValue = Parameter.ReportLocalVariableReassignment.DEFAULT,
+    description = Parameter.ReportLocalVariableReassignment.DESCRIPTION
+  )
+  boolean reportLocalVariableReassignment;
 
-  @RuleProperty(defaultValue = DEFAULT_FORBID_METHOD_PARAMETER_REASSIGNMENT, description = METHOD_PARAMETER_REASSIGNED_MESSAGE_TEMPLATE_DESCRIPTION)
-  boolean forbidMethodParameterReassignment;
+  @RuleProperty(
+    defaultValue = Parameter.ReportMethodParameterReassignment.DEFAULT,
+    description = Parameter.ReportMethodParameterReassignment.DESCRIPTION
+  )
+  boolean reportMethodParameterReassignment;
 
-  @RuleProperty(defaultValue = DEFAULT_FORBID_REASSIGNMENT_INSIDE_LOOP, description = FORBID_REASSIGNMENT_INSIDE_LOOP_DESCRIPTION)
-  boolean forbidReassignmentInsideLoop;
+  @RuleProperty(
+    defaultValue = Parameter.ReportReassignmentInsideLoop.DEFAULT,
+    description = Parameter.ReportReassignmentInsideLoop.DESCRIPTION
+  )
+  boolean reportReassignmentInsideLoop;
 
-  @RuleProperty(defaultValue = DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE, description = VARIABLE_REASSIGNED_MESSAGE_TEMPLATE_DESCRIPTION)
-  String variableReassignedMessageTemplate;
+  @RuleProperty(
+    defaultValue = Parameter.MessageTemplate.DEFAULT,
+    description = Parameter.MessageTemplate.DESCRIPTION
+  )
+  String messageTemplate;
 
-  @RuleProperty(defaultValue = DEFAULT_METHOD_PARAMETER_REASSIGNED_MESSAGE_TEMPLATE, description = METHOD_PARAMETER_REASSIGNED_MESSAGE_TEMPLATE_DESCRIPTION)
-  String methodParameterReassignedMessageTemplate;
-
-  @RuleProperty(defaultValue = DEFAULT_VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE, description = VARIABLE_REASSIGNED_INSIDE_LOOP_MESSAGE_TEMPLATE_DESCRIPTION)
-  String variableReassignedInsideLoopMessageTemplate;
-
-  @RuleProperty(defaultValue = DEFAULT_MUTABLE_ANNOTATION_NAME, description = MUTABLE_ANNOTATION_DESCRIPTION)
+  @RuleProperty(
+    defaultValue = Parameter.MutableAnnotationName.DEFAULT,
+    description = Parameter.MutableAnnotationName.DESCRIPTION
+  )
   String mutableAnnotationName;
 
   // blocks (static blocks, methods) which are direct children of the class
@@ -287,13 +295,13 @@ public class ForbiddenVariableReassignmentCheck extends BaseTreeVisitor implemen
     }
   }
 
-  private void reportErrorIfAssignmentWasIllegal(ValueAssignationExpression expression) {
+  private void reportErrorIfAssignmentWasIllegal(AssignationExpression expression) {
 
     final Variable variable = expression.variable();
     final boolean handles =
-      (expression.isInsideLoop() && forbidReassignmentInsideLoop) ||
-      (variable.isLocal() && forbidLocalVariableReassignment) ||
-      (variable.isMethodParameter() && forbidMethodParameterReassignment);
+      (expression.isInsideLoop() && reportReassignmentInsideLoop) ||
+      (variable.isLocal() && reportLocalVariableReassignment) ||
+      (variable.isMethodParameter() && reportMethodParameterReassignment);
 
     if (variable.isMutable() || !handles) return;
 
@@ -301,35 +309,35 @@ public class ForbiddenVariableReassignmentCheck extends BaseTreeVisitor implemen
       if (expression.isInsideLoopParenthesis() && variable.isInsideLoopParenthesis()) return;
 
       if (!variable.isInsideLoop()) {
-        reportIssueInsideLoop(expression);
+        reportIssue(expression);
         return;
       }
     }
 
-    final List<ValueAssignationExpression> expressions = variable.assignationExpressions();
+    final List<AssignationExpression> expressions = variable.assignationExpressions();
 
     if (variable.hasInitialValue() || variable.isMethodParameter()) {
-      reportIssueOutsideOfLoop(expression);
+      reportIssue(expression);
       return;
     }
 
-    for (ValueAssignationExpression previousAssignationExpression : expressions) {
+    for (AssignationExpression previousAssignationExpression : expressions) {
       if (previousAssignationExpression == expression ||
         areExpressionsMutuallyExclusive(previousAssignationExpression, expression)) continue;
 
-      reportIssueOutsideOfLoop(expression);
+      reportIssue(expression);
       return;
     }
   }
 
-  private boolean areExpressionsMutuallyExclusive(ValueAssignationExpression a, ValueAssignationExpression b) {
+  private boolean areExpressionsMutuallyExclusive(AssignationExpression a, AssignationExpression b) {
     final Block closestCommonAncestor = getClosestCommonAncestor(a, b);
     return
       closestCommonAncestor == null ||
         closestCommonAncestor.type() == Block.Type.MUTUALLY_EXCLUSIVE_STATEMENTS_WRAPPER;
   }
 
-  private Block getClosestCommonAncestor(ValueAssignationExpression a, ValueAssignationExpression b) {
+  private Block getClosestCommonAncestor(AssignationExpression a, AssignationExpression b) {
     final List<Block> ancestorsOfA = a.ancestorsClosestToFurthest();
     final List<Block> ancestorsOfB = b.ancestorsClosestToFurthest();
 
@@ -339,26 +347,11 @@ public class ForbiddenVariableReassignmentCheck extends BaseTreeVisitor implemen
       .orElse(null);
   }
 
-  private void reportIssueInsideLoop(ValueAssignationExpression expression) {
-    reportIssue(expression, variableReassignedInsideLoopMessageTemplate);
-  }
-
-  private void reportIssueOutsideOfLoop(ValueAssignationExpression expression) {
-    reportIssue(
-      expression,
-      expression.variable().isLocal()
-        ? variableReassignedMessageTemplate
-        : methodParameterReassignedMessageTemplate
-    );
-  }
-
-  private void reportIssue(ValueAssignationExpression expression, String messageTemplate) {
+  private void reportIssue(AssignationExpression expression) {
 
     int line = expression.firstToken().line();
-    final String message = Optional.ofNullable(messageTemplate).orElse(DEFAULT_VARIABLE_REASSIGNED_MESSAGE_TEMPLATE)
-      .replace(PARAM_VARIABLE_NAME, expression.variable().name())
-      .replace(PARAM_LINE_NUMBER,   Integer.toString(line))
-      .replace(PARAM_COLUMN_NUMBER, Integer.toString(expression.firstToken().column()));
+    final String message = Optional.ofNullable(messageTemplate).orElse(Parameter.MessageTemplate.DEFAULT)
+      .replace(Parameter.MessageTemplate.PARAM_VARIABLE_NAME, expression.variable().name());
 
     fileScannerContext.addIssue(line, this, message);
   }

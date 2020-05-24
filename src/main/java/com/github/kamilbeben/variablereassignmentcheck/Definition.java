@@ -1,10 +1,9 @@
-package com.github.kamilbeben.forbidvariablereassignment;
+package com.github.kamilbeben.variablereassignmentcheck;
 
-import com.github.kamilbeben.forbidvariablereassignment.check.ForbiddenVariableReassignmentCheck;
 import org.sonar.api.server.rule.RulesDefinition;
 import org.sonar.api.server.rule.RulesDefinitionAnnotationLoader;
 
-public class ForbiddenVariableReassignmentDefinition implements RulesDefinition {
+public class Definition implements RulesDefinition {
 
   static final String REPOSITORY_KEY = "com.github.kamilbeben";
   static final String REPOSITORY_NAME = "forbid-variable-reassignment-repository";
@@ -19,7 +18,7 @@ public class ForbiddenVariableReassignmentDefinition implements RulesDefinition 
       .setName(REPOSITORY_NAME);
 
     RULE_DEFINITION_LOADER
-      .load(repository, ForbiddenVariableReassignmentCheck.class);
+      .load(repository, Check.class);
 
     repository.done();
   }

@@ -1,19 +1,19 @@
-package com.github.kamilbeben.forbidvariablereassignment.check.internal;
+package com.github.kamilbeben.variablereassignmentcheck.pojo;
 
-import com.github.kamilbeben.forbidvariablereassignment.check.ForbiddenVariableReassignmentUtils;
+import com.github.kamilbeben.variablereassignmentcheck.Utils;
 import org.sonar.plugins.java.api.tree.Tree;
 
-public class ValueAssignationExpression extends BlockChild {
+public class AssignationExpression extends BlockChild {
 
   private final Variable variable;
   private final boolean isInsideLoop;
   private final boolean isInsideLoopParenthesis;
 
-  ValueAssignationExpression(Block parent, Variable variable, Tree tree) {
+  AssignationExpression(Block parent, Variable variable, Tree tree) {
     super(parent, tree.firstToken(), tree.lastToken());
     this.variable = variable;
-    this.isInsideLoop = ForbiddenVariableReassignmentUtils.isInsideLoop(tree);
-    this.isInsideLoopParenthesis = ForbiddenVariableReassignmentUtils.isInsideLoopParenthesis(tree);
+    this.isInsideLoop = Utils.isInsideLoop(tree);
+    this.isInsideLoopParenthesis = Utils.isInsideLoopParenthesis(tree);
     parent.addChild(this);
   }
 

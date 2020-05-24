@@ -1,4 +1,4 @@
-package com.github.kamilbeben.forbidvariablereassignment.check.internal;
+package com.github.kamilbeben.variablereassignmentcheck.pojo;
 
 import com.google.common.collect.ImmutableList;
 import org.sonar.plugins.java.api.tree.SyntaxToken;
@@ -9,7 +9,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.github.kamilbeben.forbidvariablereassignment.check.internal.Block.Type.MUTUALLY_EXCLUSIVE_STATEMENTS_WRAPPER;
+import static com.github.kamilbeben.variablereassignmentcheck.pojo.Block.Type.MUTUALLY_EXCLUSIVE_STATEMENTS_WRAPPER;
 
 public class Block extends BlockChild {
 

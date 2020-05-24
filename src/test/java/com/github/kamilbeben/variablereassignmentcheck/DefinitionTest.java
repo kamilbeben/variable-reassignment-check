@@ -1,18 +1,18 @@
-package com.github.kamilbeben.forbidvariablereassignment;
+package com.github.kamilbeben.variablereassignmentcheck;
 
 import org.apache.commons.lang.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.sonar.api.server.rule.RulesDefinition;
 
-import static com.github.kamilbeben.forbidvariablereassignment.ForbiddenVariableReassignmentDefinition.REPOSITORY_KEY;
+import static com.github.kamilbeben.variablereassignmentcheck.Definition.REPOSITORY_KEY;
 
-public class ForbiddenVariableReassignmentDefinitionTest {
+public class DefinitionTest {
 
   @Test
   public void test() {
     final RulesDefinition.Context context = new RulesDefinition.Context();
-    final ForbiddenVariableReassignmentDefinition definition = new ForbiddenVariableReassignmentDefinition();
+    final Definition definition = new Definition();
     definition.define(context);
 
     final RulesDefinition.Repository repository = context.repository(REPOSITORY_KEY);
