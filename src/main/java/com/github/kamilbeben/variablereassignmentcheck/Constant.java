@@ -18,7 +18,7 @@ public class Constant {
     static final String DESCRIPTION =
       "<p>" +
         "Reassigning variables (oh, the irony) adds unnecessary layer of complexity to the code and, " +
-        "in most cases it means that the code simply could be better (for example, some parts could be extracted to another method)" +
+        "in most cases it means that the code could be better (for example, some parts could be extracted to another method)" +
       "</p>" +
       "<p>" +
         "<h1>Noncompliant example</h1>" +
@@ -32,7 +32,7 @@ public class Constant {
         "</pre>" +
       "</p>" +
       "<p>" +
-        "<h1> Compliant solution example 1</h1>" +
+        "<h1> Compliant solution</h1>" +
         "<pre>" +
           "void foo(Bar bar) {\n" +
           "  String barName = Optional.ofNullable(bar.getName()).orElse(\"defaultName\");\n" +
